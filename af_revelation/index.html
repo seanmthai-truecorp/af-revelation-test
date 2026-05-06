@@ -463,13 +463,16 @@
       border-radius: 24px 24px 0 0;
       padding-bottom: env(safe-area-inset-bottom, 24px);
       height: auto;
-      max-height: 95vh;
+      max-height: 90vh;
       display: none;
       flex-direction: column;
       overflow: hidden;
+      min-height: 0;
     }
-    .bottom-sheet.open { display: flex; animation: sheetUp 0.36s cubic-bezier(.17,.67,.38,1.1) both; }
-    @keyframes sheetUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .bottom-sheet.open    { display: flex; animation: sheetUp 0.28s cubic-bezier(.25,.46,.45,.94) both; }
+    .bottom-sheet.closing { animation: sheetDown 0.24s ease-in both; }
+    @keyframes sheetUp   { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    @keyframes sheetDown { from { transform:translateY(0);    } to { transform:translateY(100%); } }
 
     /* Top bar: handle + close X */
     .sheet-top-bar {
@@ -508,7 +511,8 @@
       position: relative;
       height: 100vw;
       max-height: 480px;
-      flex-shrink: 0;
+      flex-shrink: 1;
+      min-height: 120px;
       padding: 16px 24px 0;
       overflow: hidden;
     }
@@ -523,7 +527,10 @@
 
     /* Sheet body — dark gray */
     .sheet-body {
-      flex-shrink: 0;
+      flex-shrink: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       padding: 40px 24px 32px;
       display: block;
       background: #1c1c1e;
@@ -998,14 +1005,27 @@ function handleBackdropClick(e) {
   if (e.target === document.getElementById('modalBackdrop')) closeAll();
 }
 
-function closeAll() {
-  const sheet = document.getElementById('bottomSheet');
-  sheet.style.transform = '';
+function closeAll(skipAnim) {
+  const sheet    = document.getElementById('bottomSheet');
+  const backdrop = document.getElementById('sheetBackdrop');
+  sheet.style.transform  = '';
   sheet.style.transition = '';
   document.getElementById('modalBackdrop').classList.remove('open');
-  document.getElementById('sheetBackdrop').classList.remove('open');
-  sheet.classList.remove('open');
-  document.body.style.overflow = '';
+
+  if (skipAnim || !sheet.classList.contains('open')) {
+    backdrop.classList.remove('open');
+    sheet.classList.remove('open', 'closing');
+    document.body.style.overflow = '';
+    return;
+  }
+
+  backdrop.classList.remove('open');
+  sheet.classList.add('closing');
+  sheet.addEventListener('animationend', function handler() {
+    sheet.removeEventListener('animationend', handler);
+    sheet.classList.remove('open', 'closing');
+    document.body.style.overflow = '';
+  }, { once: true });
 }
 
 /* ── DRAG-TO-CLOSE (bottom sheet) ───────── */
@@ -1035,7 +1055,7 @@ function closeAll() {
     if (dy > DISMISS_THRESHOLD) {
       sheet.style.transition = 'transform 0.25s ease';
       sheet.style.transform  = 'translateY(100%)';
-      setTimeout(closeAll, 250);
+      setTimeout(() => closeAll(true), 250);
     } else {
       sheet.style.transition = 'transform 0.25s cubic-bezier(.17,.67,.38,1.1)';
       sheet.style.transform  = '';
