@@ -33,7 +33,6 @@
     }
 
     html, body {
-      height: 100%;
       font-family: 'Kanit', sans-serif;
       color: var(--white);
       overflow-x: hidden;
@@ -151,8 +150,6 @@
       font-weight: 600; letter-spacing: 0.04em;
       text-align: center; color: var(--accent);
       text-shadow: 0 2px 12px rgba(0,0,0,0.8);
-      opacity: 0;
-      animation: revealUp 0.75s 0.25s ease forwards, afGlow 2.8s 1.6s ease-in-out infinite alternate;
     }
     .title-br { display: none; }
     @media (max-width: 600px) { .title-br { display: block; } }
@@ -208,7 +205,6 @@
         inset 0 -2px 0 rgba(220,0,0,0.30);
       transition: transform 0.30s cubic-bezier(.17,.67,.38,1.3), box-shadow 0.30s ease;
       animation: cardReveal 0.6s calc(var(--i,0) * 75ms) ease both;
-      will-change: transform;
     }
     .contestant-card:hover {
       transform: scale(1.05);
@@ -457,19 +453,20 @@
       background-size: auto, auto, auto, auto, cover;
       background-position: 0 0, 0 0, 0 0, 0 0, top center;
       background-repeat: no-repeat;
-      backdrop-filter: blur(26px);
-      -webkit-backdrop-filter: blur(26px);
       border-top: 1px solid rgba(200,0,0,0.20);
       border-radius: 24px 24px 0 0;
       padding-bottom: env(safe-area-inset-bottom, 24px);
-      height: auto;
-      max-height: 90vh;
-      display: none;
+      height: 90dvh;
+      display: flex;
       flex-direction: column;
       overflow: hidden;
       min-height: 0;
+      transform: translateY(100%);
+      visibility: hidden;
+      pointer-events: none;
+      will-change: transform;
     }
-    .bottom-sheet.open    { display: flex; animation: sheetUp 0.28s cubic-bezier(.25,.46,.45,.94) both; }
+    .bottom-sheet.open    { transform: translateY(0); visibility: visible; pointer-events: auto; animation: sheetUp 0.28s cubic-bezier(.25,.46,.45,.94) both; }
     .bottom-sheet.closing { animation: sheetDown 0.24s ease-in both; }
     @keyframes sheetUp   { from { transform:translateY(100%); } to { transform:translateY(0); } }
     @keyframes sheetDown { from { transform:translateY(0);    } to { transform:translateY(100%); } }
@@ -509,8 +506,8 @@
     /* Stack wrap — transparent, gradient lives on bottom-sheet */
     .sheet-stack-wrap {
       position: relative;
-      height: 100vw;
-      max-height: 480px;
+      height: 45dvh;
+      max-height: 340px;
       flex-shrink: 1;
       min-height: 120px;
       padding: 16px 24px 0;
@@ -615,6 +612,12 @@
       animation: flashReveal 1.5s cubic-bezier(.4,0,.2,1) forwards;
       pointer-events: none;
     }
+    @media (prefers-reduced-motion: reduce) {
+      .orb, .beam, .ring { animation: none !important; opacity: 0 !important; }
+      #dustCanvas { display: none !important; }
+      .logo-wrap, .grid-wrap, .sponsor-section { animation: none !important; opacity: 1 !important; }
+      .contestant-card { animation: none !important; opacity: 1 !important; transform: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -633,7 +636,7 @@
   <div class="grid-wrap">
     <div class="contestant-grid" id="contestantGrid">
     <div class="contestant-card" data-code="V1" data-name="พิม" onclick="openProfile(this)">
-      <img src="assets/contestants/V1.png" alt="พิม" loading="lazy" />
+      <img src="assets/contestants/V1.png" alt="พิม" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V1</span>
@@ -641,7 +644,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V2" data-name="ณัฐ" onclick="openProfile(this)">
-      <img src="assets/contestants/V2.png" alt="ณัฐ" loading="lazy" />
+      <img src="assets/contestants/V2.png" alt="ณัฐ" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V2</span>
@@ -649,7 +652,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V3" data-name="มณี" onclick="openProfile(this)">
-      <img src="assets/contestants/V3.png" alt="มณี" loading="lazy" />
+      <img src="assets/contestants/V3.png" alt="มณี" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V3</span>
@@ -657,7 +660,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V4" data-name="ธน" onclick="openProfile(this)">
-      <img src="assets/contestants/V4.png" alt="ธน" loading="lazy" />
+      <img src="assets/contestants/V4.png" alt="ธน" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V4</span>
@@ -665,7 +668,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V5" data-name="อ้อย" onclick="openProfile(this)">
-      <img src="assets/contestants/V5.png" alt="อ้อย" loading="lazy" />
+      <img src="assets/contestants/V5.png" alt="อ้อย" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V5</span>
@@ -673,7 +676,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V6" data-name="วิชัย" onclick="openProfile(this)">
-      <img src="assets/contestants/V6.png" alt="วิชัย" loading="lazy" />
+      <img src="assets/contestants/V6.png" alt="วิชัย" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V6</span>
@@ -681,7 +684,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V7" data-name="ภา" onclick="openProfile(this)">
-      <img src="assets/contestants/V7.png" alt="ภา" loading="lazy" />
+      <img src="assets/contestants/V7.png" alt="ภา" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V7</span>
@@ -689,7 +692,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V8" data-name="กิต" onclick="openProfile(this)">
-      <img src="assets/contestants/V8.png" alt="กิต" loading="lazy" />
+      <img src="assets/contestants/V8.png" alt="กิต" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V8</span>
@@ -697,7 +700,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V9" data-name="นุช" onclick="openProfile(this)">
-      <img src="assets/contestants/V9.png" alt="นุช" loading="lazy" />
+      <img src="assets/contestants/V9.png" alt="นุช" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V9</span>
@@ -705,7 +708,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V10" data-name="ศักดิ์" onclick="openProfile(this)">
-      <img src="assets/contestants/V10.png" alt="ศักดิ์" loading="lazy" />
+      <img src="assets/contestants/V10.png" alt="ศักดิ์" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V10</span>
@@ -713,7 +716,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V11" data-name="นภ" onclick="openProfile(this)">
-      <img src="assets/contestants/V11.png" alt="นภ" loading="lazy" />
+      <img src="assets/contestants/V11.png" alt="นภ" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V11</span>
@@ -721,7 +724,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V12" data-name="โก้" onclick="openProfile(this)">
-      <img src="assets/contestants/V12.png" alt="โก้" loading="lazy" />
+      <img src="assets/contestants/V12.png" alt="โก้" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V12</span>
@@ -847,7 +850,8 @@
     e.style.setProperty('--sdur',c.d);e.style.setProperty('--sdelay',c.dl);L.appendChild(e);
   });
   const P=['rgba(255,200,60,1)','rgba(235,28,36,1)','rgba(255,120,40,1)','rgba(255,240,180,1)','rgba(200,10,10,1)'];
-  for(let i=0;i<24;i++){
+  const orbCount = window.innerWidth <= 600 ? 8 : 24;
+  for(let i=0;i<orbCount;i++){
     const e=document.createElement('div');e.className='orb';
     const s=14+Math.random()*42;
     e.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*96}%;bottom:-60px;
@@ -936,7 +940,7 @@
     if (mode==='idle') { if (frameCounter>=pauseFrames) startWave(); }
     else {
       sweepX+=sweepDX; sweepY+=sweepDY;
-      const n=4+Math.floor(Math.random()*5);
+      const n = window.innerWidth <= 600 ? 1+Math.floor(Math.random()*2) : 4+Math.floor(Math.random()*5);
       for (let i=0;i<n;i++) particles.push(new Dust(sweepX,sweepY));
       if (frameCounter>=activeDur) startPause();
     }
@@ -948,6 +952,10 @@
   requestAnimationFrame(frame);
 })();
 document.querySelectorAll('.contestant-card').forEach((c,i)=>c.style.setProperty('--i',i));
+document.querySelectorAll('.contestant-card').forEach(c => {
+  c.addEventListener('mouseenter', () => { c.style.willChange = 'transform'; });
+  c.addEventListener('mouseleave', () => { c.style.willChange = ''; });
+});
 
 /* ════ MODAL / SHEET LOGIC ═══════════════ */
 const isMobile = () => window.innerWidth <= 600;
