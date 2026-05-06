@@ -439,11 +439,12 @@
     .sheet-backdrop {
       display: none; position: fixed; inset: 0; z-index: 100;
       background: rgba(0,0,0,0.70);
+      touch-action: none;
     }
     .sheet-backdrop.open { display: block; animation: backdropIn 0.22s ease; }
 
     .bottom-sheet {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 101;
+      position: fixed; top: 10dvh; bottom: 0; left: 0; right: 0; z-index: 101;
       background:
         radial-gradient(ellipse at 50% 30%, rgba(220,0,0,0.28) 0%, rgba(100,0,0,0.18) 40%, transparent 70%),
         radial-gradient(ellipse at 10% 90%, rgba(160,0,0,0.22) 0%, transparent 50%),
@@ -456,7 +457,7 @@
       border-top: 1px solid rgba(200,0,0,0.20);
       border-radius: 24px 24px 0 0;
       padding-bottom: env(safe-area-inset-bottom, 24px);
-      height: 90dvh;
+      height: auto;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -528,6 +529,7 @@
       min-height: 0;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
       padding: 40px 24px 32px;
       display: block;
       background: #1c1c1e;
@@ -960,6 +962,20 @@ document.querySelectorAll('.contestant-card').forEach(c => {
 /* ════ MODAL / SHEET LOGIC ═══════════════ */
 const isMobile = () => window.innerWidth <= 600;
 
+let _savedScrollY = 0;
+function lockBodyScroll() {
+  _savedScrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = '-' + _savedScrollY + 'px';
+  document.body.style.width = '100%';
+}
+function unlockBodyScroll() {
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
+  window.scrollTo(0, _savedScrollY);
+}
+
 const PROFILES = {
   'V1':  { age:'20 ปี', height:'168 ซม.', home:'กรุงเทพฯ',   genre:'Pop / R&B',      quote:'ทุกความพยายามไม่มีวันสูญเปล่า' },
   'V2':  { age:'22 ปี', height:'175 ซม.', home:'เชียงใหม่',   genre:'Indie / Folk',   quote:'ดนตรีคือภาษาที่ไม่ต้องแปล' },
@@ -993,7 +1009,7 @@ function openProfile(card) {
     img.src = imgSrc; img.alt = name;
     document.getElementById('sheetBackdrop').classList.add('open');
     document.getElementById('bottomSheet').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
   } else {
     document.getElementById('modalBadge').textContent  = code;
     document.getElementById('modalName').textContent   = name;
@@ -1005,7 +1021,7 @@ function openProfile(card) {
     const img = document.getElementById('modalStackImg');
     img.src = imgSrc; img.alt = name;
     document.getElementById('modalBackdrop').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
   }
 }
 
@@ -1023,7 +1039,7 @@ function closeAll(skipAnim) {
   if (skipAnim || !sheet.classList.contains('open')) {
     backdrop.classList.remove('open');
     sheet.classList.remove('open', 'closing');
-    document.body.style.overflow = '';
+    unlockBodyScroll();
     return;
   }
 
@@ -1032,7 +1048,7 @@ function closeAll(skipAnim) {
   sheet.addEventListener('animationend', function handler() {
     sheet.removeEventListener('animationend', handler);
     sheet.classList.remove('open', 'closing');
-    document.body.style.overflow = '';
+    unlockBodyScroll();
   }, { once: true });
 }
 
