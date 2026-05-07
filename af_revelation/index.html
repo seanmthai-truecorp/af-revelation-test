@@ -19,12 +19,10 @@
   <link rel="canonical" href="" />
   <link rel="icon" type="image/png" href="assets/brand/favicon.png" />
 
-  <!-- FIX #8: preconnect to both Google Fonts hosts to avoid extra DNS+TLS handshake -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Inter:wght@600;800&display=swap" rel="stylesheet" />
 
-  <!-- FIX #9: preload above-the-fold critical assets so browser fetches them early -->
   <link rel="preload" as="image" href="assets/brand/af_logo.png" />
   <link rel="preload" as="image" href="assets/brand/af_countdown_bg.png" media="(min-width: 601px)" />
   <link rel="preload" as="image" href="assets/brand/af_countdown_bg_mobile.png" media="(max-width: 600px)" />
@@ -53,8 +51,6 @@
       background-size: cover;
       background-position: center top;
       background-repeat: no-repeat;
-      /* FIX #3: removed background-attachment:fixed — it forces a full repaint on every scroll
-         because the browser cannot promote it to its own compositor layer */
     }
 
     body::before {
@@ -65,69 +61,35 @@
       pointer-events: none; z-index: 0; opacity: 0.5;
     }
 
-    /* ── ANIMATED LAYER ─────────────────────── */
-    .anim-layer {
+    /* ════════════════════════════════════════
+       VIDEO BACKGROUND LAYER
+       Uncomment #bgVideo CSS below when the video file is ready.
+       z-index 1 places it above the body background image and noise
+       texture but below the gradient overlay (z-index 2).
+    ════════════════════════════════════════ */
+
+    /* #bgVideo {
       position: fixed; inset: 0; z-index: 1;
-      pointer-events: none; overflow: hidden;
-    }
-    .anim-layer::before {
-      content: ''; position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    } */
+
+    /* ── GRADIENT OVERLAY ───────────────────
+       Static atmospheric layer — sits on top of the video (or body
+       background when no video). No JS, no rAF, zero runtime cost. */
+    .overlay-layer {
+      position: fixed; inset: 0; z-index: 2;
+      pointer-events: none;
       background:
         radial-gradient(ellipse 90% 60% at 50% 20%, rgba(180,8,4,0.60) 0%, transparent 70%),
         radial-gradient(ellipse 60% 50% at 80% 80%, rgba(100,4,4,0.45) 0%, transparent 65%),
         linear-gradient(180deg, rgba(13,2,2,0.7) 0%, rgba(13,2,2,0.9) 100%);
     }
-    .orb {
-      position: absolute; border-radius: 50%; opacity: 0;
-      will-change: transform, opacity;
-      animation: floatUp var(--dur) var(--delay) ease-in-out infinite;
-    }
-    @keyframes floatUp {
-      0%   { opacity: 0; transform: translateY(0) scale(0.6); }
-      15%  { opacity: var(--peak); }
-      80%  { opacity: calc(var(--peak) * 0.25); }
-      100% { opacity: 0; transform: translateY(-110vh) scale(1.1); }
-    }
-    .beam {
-      position: absolute; top: -10%; width: 3px; height: 65%;
-      background: linear-gradient(180deg, rgba(255,200,80,0.55) 0%, rgba(255,200,80,0.10) 60%, transparent 100%);
-      border-radius: 2px; filter: blur(4px);
-      transform-origin: top center;
-      will-change: transform, opacity;
-      animation: sweep var(--sdur) var(--sdelay) ease-in-out infinite alternate;
-    }
-    @keyframes sweep {
-      0%   { transform: rotate(var(--sa)); opacity: 0.25; }
-      50%  { opacity: 0.75; }
-      100% { transform: rotate(var(--sb)); opacity: 0.25; }
-    }
-
-    /* FIX #2: use transform:scale() instead of animating width/height, which triggers
-       layout reflow on every frame — scale runs on the compositor thread */
-    .ring {
-      position: absolute; left: 50%; top: 38%;
-      width: 40px; height: 40px;
-      transform: translate(-50%, -50%) scale(1);
-      border-radius: 50%;
-      border: 1px solid rgba(255,200,80,0.14);
-      will-change: transform, opacity;
-      animation: expandRing var(--rdur) var(--rdelay) ease-out infinite;
-    }
-    @keyframes expandRing {
-      0%   { transform: translate(-50%, -50%) scale(1);  opacity: 0.65; }
-      100% { transform: translate(-50%, -50%) scale(20); opacity: 0; }
-    }
-
-    #dustCanvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
 
     /* ── PAGE ───────────────────────────────── */
     .page {
-      position: relative; z-index: 2;
+      position: relative; z-index: 3;
       min-height: 100vh;
       display: flex; flex-direction: column; align-items: center;
       padding: 40px 24px 48px;
@@ -190,7 +152,6 @@
       body {
         background-image: url('assets/brand/af_countdown_bg_mobile.png');
         background-position: center center;
-        /* background-attachment already removed from desktop rule above */
       }
     }
 
@@ -236,7 +197,6 @@
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* FIX #14: explicit width/height prevent layout shift (CLS) while images load */
     .contestant-card > img {
       position: absolute;
       top: 5%; left: 0; right: 0; bottom: 0;
@@ -339,9 +299,6 @@
       background-size: auto, auto, auto, auto, cover;
       background-position: 0 0, 0 0, 0 0, 0 0, top center;
       background-repeat: no-repeat;
-      /* FIX #4: removed backdrop-filter:blur(22px) from modal-box —
-         .modal-backdrop already blurs the entire backdrop; double-blurring is very
-         expensive on mobile GPUs and produces no visible improvement */
       border: none;
       border-radius: 26px;
       box-shadow:
@@ -448,10 +405,6 @@
     /* ════════════════════════════════════════
        BOTTOM SHEET (mobile ≤600px)
     ════════════════════════════════════════ */
-
-    /* FIX #1a: replace display:none/block toggle with opacity+pointer-events so the
-       backdrop can fade out smoothly alongside the sheet's close animation instead
-       of disappearing instantly (which made the background "pop" behind the sheet) */
     .sheet-backdrop {
       position: fixed; inset: 0; z-index: 100;
       background: rgba(0,0,0,0.70);
@@ -602,26 +555,10 @@
     @media (min-width: 601px)  { .sheet-backdrop, .bottom-sheet { display:none !important; } }
 
     /* ── KEYFRAMES ──────────────────────────── */
-    @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes fadeUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
-    @keyframes revealUp {
-      0%   { opacity:0; transform:translateY(18px); filter:blur(4px); }
-      60%  { filter:blur(0); }
-      100% { opacity:1; transform:translateY(0); filter:blur(0); }
-    }
-    @keyframes afGlow {
-      from { text-shadow: 0 0 6px rgba(255,175,41,0.3), 0 2px 12px rgba(0,0,0,0.8); }
-      to   { text-shadow: 0 0 22px rgba(255,175,41,1), 0 0 44px rgba(255,100,0,0.55), 0 2px 12px rgba(0,0,0,0.8); }
-    }
-    @keyframes logoShimmer {
-      from { transform: translateX(-150%); }
-      to   { transform: translateX(150%); }
-    }
-    @keyframes flashReveal {
-      0%   { opacity:1; }
-      35%  { opacity:0.65; }
-      100% { opacity:0; }
-    }
+    @keyframes fadeDown    { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp      { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
+    @keyframes logoShimmer { from { transform: translateX(-150%); }           to { transform: translateX(150%); } }
+    @keyframes flashReveal { 0% { opacity:1; } 35% { opacity:0.65; } 100% { opacity:0; } }
 
     /* ── PAGE-LOAD FLASH ─────────────────────── */
     #reveal-flash {
@@ -631,9 +568,8 @@
       animation: flashReveal 1.5s cubic-bezier(.4,0,.2,1) forwards;
       pointer-events: none;
     }
+
     @media (prefers-reduced-motion: reduce) {
-      .orb, .beam, .ring { animation: none !important; opacity: 0 !important; }
-      #dustCanvas { display: none !important; }
       .logo-wrap, .grid-wrap, .sponsor-section { animation: none !important; opacity: 1 !important; }
       .contestant-card { animation: none !important; opacity: 1 !important; transform: none !important; }
     }
@@ -642,7 +578,30 @@
 <body>
 
 <div id="reveal-flash" aria-hidden="true"></div>
-<div class="anim-layer" id="animLayer"><canvas id="dustCanvas"></canvas></div>
+
+<!-- ════ VIDEO BACKGROUND ════════════════════════════════════════
+     Drop your video file into assets/brand/ then uncomment the
+     block below AND the matching #bgVideo CSS rule above.
+
+     Recommended formats (provide both for full browser coverage):
+       assets/brand/bg_loop.webm  (VP9 — Chrome / Firefox / Edge)
+       assets/brand/bg_loop.mp4   (H.264 — Safari / fallback)
+
+     Tips:
+       • 1920×1080, 20–30 s loop, target ≤ 3 MB total
+       • Encode with a dark/atmospheric palette so the gradient
+         overlay above blends naturally
+       • autoplay + muted + playsinline are all required for
+         mobile browsers to autoplay without user gesture
+
+<video id="bgVideo" autoplay muted loop playsinline>
+  <source src="assets/brand/bg_loop.webm" type="video/webm" />
+  <source src="assets/brand/bg_loop.mp4"  type="video/mp4" />
+</video>
+════════════════════════════════════════════════════════════════ -->
+
+<!-- Static atmospheric gradient overlay — always active -->
+<div class="overlay-layer"></div>
 
 <div class="page">
 
@@ -654,8 +613,7 @@
 
   <div class="grid-wrap">
     <div class="contestant-grid" id="contestantGrid">
-    <!-- FIX #7: first 4 cards load eagerly (above fold on all viewports);
-         cards 5–12 use loading="lazy" to defer their network requests -->
+    <!-- first 4 cards eager (above fold); cards 5–12 lazy -->
     <div class="contestant-card" data-code="V1" data-name="พิม" onclick="openProfile(this)">
       <img src="assets/contestants/V1%20home.png" alt="พิม" width="300" height="400" />
       <div class="card-veil"></div>
@@ -769,7 +727,6 @@
   <div class="modal-box" id="modalBox">
     <button class="modal-close" onclick="closeAll()">✕</button>
 
-    <!-- LEFT: text -->
     <div class="modal-text-col">
       <div class="modal-header-row">
         <span class="modal-badge" id="modalBadge"></span>
@@ -801,7 +758,6 @@
       </div>
     </div>
 
-    <!-- RIGHT: static contestant image -->
     <div class="modal-stack-col">
       <img class="modal-stack-img" id="modalStackImg" src="" alt="" />
     </div>
@@ -855,157 +811,9 @@
 
 </div>
 
-<!-- FIX #10: defer so this doesn't block HTML parsing; CONTESTANTS is only
-     accessed inside openProfile() which runs on user interaction, so it's
-     guaranteed to be loaded by then. Guard added in openProfile for safety. -->
 <script src="contestants.js" defer></script>
 <script>
-/* ════ ANIMATED BG ═══════════════════════ */
-(function(){
-  const L=document.getElementById('animLayer');
-  [{'d':'5s','dl':'0s'},{'d':'5s','dl':'1.7s'},{'d':'5s','dl':'3.4s'}].forEach(c=>{
-    const e=document.createElement('div');e.className='ring';
-    e.style.setProperty('--rdur',c.d);e.style.setProperty('--rdelay',c.dl);L.appendChild(e);
-  });
-  [{'l':'20%','a':'-25deg','b':'-8deg','d':'7s','dl':'0s'},{'l':'45%','a':'-7deg','b':'7deg','d':'9s','dl':'1s'},
-   {'l':'68%','a':'8deg','b':'24deg','d':'8s','dl':'2.5s'},{'l':'10%','a':'-35deg','b':'-18deg','d':'11s','dl':'0.5s'},
-   {'l':'88%','a':'18deg','b':'36deg','d':'10s','dl':'3.2s'}].forEach(c=>{
-    const e=document.createElement('div');e.className='beam';e.style.left=c.l;
-    e.style.setProperty('--sa',c.a);e.style.setProperty('--sb',c.b);
-    e.style.setProperty('--sdur',c.d);e.style.setProperty('--sdelay',c.dl);L.appendChild(e);
-  });
-  const P=['rgba(255,200,60,1)','rgba(235,28,36,1)','rgba(255,120,40,1)','rgba(255,240,180,1)','rgba(200,10,10,1)'];
-  const orbCount = window.innerWidth <= 600 ? 8 : 24;
-  for(let i=0;i<orbCount;i++){
-    const e=document.createElement('div');e.className='orb';
-    const s=14+Math.random()*42;
-    e.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*96}%;bottom:-60px;
-      background:${P[Math.floor(Math.random()*P.length)]};filter:blur(${7+Math.random()*16}px)`;
-    e.style.setProperty('--peak',(0.22+Math.random()*0.45).toFixed(2));
-    e.style.setProperty('--dur',(12+Math.random()*16)+'s');
-    e.style.setProperty('--delay',(Math.random()*14)+'s');
-    L.appendChild(e);
-  }
-})();
-
-/* ══ GOLD DUST ══════════════════════════════════════════════════ */
-(function () {
-  const canvas = document.getElementById('dustCanvas');
-  const ctx    = canvas.getContext('2d');
-
-  /* FIX #13: debounce resize so it doesn't fire on every pixel during drag-resize */
-  function debounce(fn, wait) {
-    let t; return function() { clearTimeout(t); t = setTimeout(fn, wait); };
-  }
-
-  /* FIX #5: cache viewport width — reading window.innerWidth every rAF frame
-     can trigger style recalculation; update it only on debounced resize */
-  let _vpW = window.innerWidth;
-  function resize() { _vpW = window.innerWidth; canvas.width = _vpW; canvas.height = window.innerHeight; }
-  resize();
-  window.addEventListener('resize', debounce(resize, 16));
-
-  const COLS = [[255,215,50],[255,185,20],[255,145,10],[255,235,120],[255,200,55],[255,165,40]];
-
-  /* FIX #6a: pre-build "R,G,B" strings once so the hot draw path avoids repeated
-     string interpolation of the same values every frame */
-  const COL_STRS = COLS.map(c => `${c[0]},${c[1]},${c[2]}`);
-
-  class Dust {
-    constructor(spawnX, spawnY) {
-      const W = canvas.width, H = canvas.height;
-      this.x = Math.max(0, Math.min(W, spawnX + (Math.random()-0.5)*W*0.55));
-      this.y = Math.max(0, Math.min(H, spawnY + (Math.random()-0.5)*H*0.55));
-      this.r = 0.5 + Math.pow(Math.random(), 2.5) * 2.8;
-      this.cs      = COL_STRS[Math.floor(Math.random()*COL_STRS.length)];
-      this.peak    = Math.random() < 0.12 ? 1.0 : 0.18 + Math.random()*0.45;
-      this.vx      = (Math.random()-0.5)*0.25;
-      this.vy      = -(0.06 + Math.random()*0.28);
-      this.wAmp    = 0.15 + Math.random()*0.55;
-      this.wFreq   = 0.5  + Math.random()*1.8;
-      this.wPhase  = Math.random()*Math.PI*2;
-      this.tFreq   = 2.5  + Math.random()*5.0;
-      this.tPhase  = Math.random()*Math.PI*2;
-      this.maxLife = 200  + Math.random()*220;
-      this.life=0; this.t=0;
-    }
-    update() {
-      this.x += this.vx + Math.sin(this.t*this.wFreq+this.wPhase)*this.wAmp;
-      this.y += this.vy;
-      this.life++; this.t += 0.016;
-    }
-    draw(ctx) {
-      const p=this.life/this.maxLife;
-      const env=Math.sin(Math.PI*p);
-      const twinkle=0.65+0.35*Math.sin(this.t*this.tFreq+this.tPhase);
-      const alpha=this.peak*env*twinkle;
-      if (alpha<0.008) return;
-      const hR=this.r*(this.r>1.8?8:5.5);
-      const g=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,hR);
-      /* FIX #6b: reuse pre-built color string; only compute alpha values (which do change) */
-      const a0=alpha.toFixed(3), a1=(alpha*0.4).toFixed(3);
-      g.addColorStop(0,   `rgba(${this.cs},${a0})`);
-      g.addColorStop(0.25,`rgba(${this.cs},${a1})`);
-      g.addColorStop(1,   `rgba(${this.cs},0)`);
-      ctx.beginPath(); ctx.arc(this.x,this.y,hR,0,Math.PI*2);
-      ctx.fillStyle=g; ctx.fill();
-      if (this.peak>0.55 && this.r>1.2) {
-        ctx.beginPath(); ctx.arc(this.x,this.y,this.r*0.45,0,Math.PI*2);
-        ctx.fillStyle=`rgba(255,245,190,${(alpha*0.9).toFixed(3)})`; ctx.fill();
-      }
-    }
-    isDead() { return this.life>=this.maxLife; }
-  }
-
-  const particles=[];
-  let mode='idle', frameCounter=0, pauseFrames=30, activeDur=0;
-  let sweepX=0, sweepY=0, sweepDX=0, sweepDY=0;
-  function startWave() {
-    mode='active'; frameCounter=0;
-    activeDur=90+Math.floor(Math.random()*70);
-    const dirs=[
-      {x0:0,               y0:canvas.height*0.5, dx:3.5,  dy:0  },
-      {x0:canvas.width,    y0:canvas.height*0.5, dx:-3.5, dy:0  },
-      {x0:0,               y0:canvas.height*0.2, dx:3.0,  dy:1.5},
-      {x0:canvas.width,    y0:canvas.height*0.3, dx:-3.0, dy:1.5},
-      {x0:canvas.width*0.5,y0:0,                 dx:1.0,  dy:3.0},
-    ];
-    const d=dirs[Math.floor(Math.random()*dirs.length)];
-    sweepX=d.x0; sweepY=d.y0; sweepDX=d.dx; sweepDY=d.dy;
-  }
-  function startPause() { mode='idle'; frameCounter=0; pauseFrames=180+Math.floor(Math.random()*180); }
-  startPause(); pauseFrames=30;
-
-  function frame() {
-    requestAnimationFrame(frame);
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    frameCounter++;
-    if (mode==='idle') { if (frameCounter>=pauseFrames) startWave(); }
-    else {
-      sweepX+=sweepDX; sweepY+=sweepDY;
-      /* FIX #5: use cached _vpW instead of reading window.innerWidth every frame */
-      const n = _vpW <= 600 ? 1+Math.floor(Math.random()*2) : 4+Math.floor(Math.random()*5);
-      for (let i=0;i<n;i++) particles.push(new Dust(sweepX,sweepY));
-      if (frameCounter>=activeDur) startPause();
-    }
-    /* FIX #11: swap-and-pop instead of splice — avoids O(n) array element shifting
-       on every dead particle removal; swap with last element then pop is O(1) */
-    let i = 0;
-    while (i < particles.length) {
-      const p = particles[i];
-      p.update(); p.draw(ctx);
-      if (p.isDead()) {
-        particles[i] = particles[particles.length - 1];
-        particles.pop();
-      } else {
-        i++;
-      }
-    }
-  }
-  requestAnimationFrame(frame);
-})();
-
-document.querySelectorAll('.contestant-card').forEach((c,i)=>c.style.setProperty('--i',i));
+document.querySelectorAll('.contestant-card').forEach((c,i) => c.style.setProperty('--i', i));
 document.querySelectorAll('.contestant-card').forEach(c => {
   c.addEventListener('mouseenter', () => { c.style.willChange = 'transform'; });
   c.addEventListener('mouseleave', () => { c.style.willChange = ''; });
@@ -1014,7 +822,6 @@ document.querySelectorAll('.contestant-card').forEach(c => {
 /* ════ MODAL / SHEET LOGIC ═══════════════ */
 const isMobile = () => window.innerWidth <= 600;
 
-/* FIX #12: cache all DOM refs once at startup instead of querying on every interaction */
 const $sheet         = document.getElementById('bottomSheet');
 const $sheetBackdrop = document.getElementById('sheetBackdrop');
 const $modalBackdrop = document.getElementById('modalBackdrop');
@@ -1051,8 +858,6 @@ function unlockBodyScroll() {
 
 function openProfile(card) {
   const code   = card.dataset.code;
-  /* FIX #10 guard: CONTESTANTS may not yet be available on very slow connections
-     because contestants.js is deferred; fall back to empty object gracefully */
   const p      = (typeof CONTESTANTS !== 'undefined' && CONTESTANTS[code]) || {};
   const name   = p.name || card.dataset.name;
   const imgSrc = 'assets/contestants/' + code + '.png';
@@ -1087,15 +892,6 @@ function handleBackdropClick(e) {
   if (e.target === $modalBackdrop) closeAll();
 }
 
-/* FIX #1b: Reworked closeAll to eliminate the mobile flash.
-   Root causes fixed:
-   1. Inline style reset was unconditional at the top — caused a 1-frame snap
-      back to the open position before the closing animation could start.
-   2. Backdrop was removed immediately — the dark overlay disappeared while
-      the sheet was still visible, making the background "pop" behind it.
-   Fix: only reset inline styles in the skipAnim branch (after drag is done);
-   let the CSS opacity transition on .sheet-backdrop fade it out alongside
-   the sheetDown animation; clean up inline styles only after animationend. */
 function closeAll(skipAnim) {
   $modalBackdrop.classList.remove('open');
 
@@ -1108,8 +904,6 @@ function closeAll(skipAnim) {
     return;
   }
 
-  /* Removing .open triggers the CSS opacity transition on the backdrop (0.24s),
-     which matches the sheet's sheetDown animation (0.24s) — they fade together */
   $sheetBackdrop.classList.remove('open');
   $sheet.classList.add('closing');
   $sheet.addEventListener('animationend', function handler() {
@@ -1120,25 +914,15 @@ function closeAll(skipAnim) {
   }, { once: true });
 }
 
-/* ── DRAG-TO-CLOSE (bottom sheet) ───────── */
+/* ── DRAG-TO-CLOSE ───────── */
 (function () {
   const topBar   = $sheet.querySelector('.sheet-top-bar');
   const closeBtn = $sheet.querySelector('.sheet-close-x');
   const DISMISS_THRESHOLD = 80;
   let startY = 0, currentY = 0, dragging = false;
 
-  function dragStart(clientY) {
-    startY = clientY;
-    currentY = clientY;
-    dragging = true;
-    $sheet.style.transition = 'none';
-  }
-  function dragMove(clientY) {
-    if (!dragging) return;
-    currentY = clientY;
-    const dy = Math.max(0, currentY - startY);
-    $sheet.style.transform = `translateY(${dy}px)`;
-  }
+  function dragStart(clientY) { startY = clientY; currentY = clientY; dragging = true; $sheet.style.transition = 'none'; }
+  function dragMove(clientY)  { if (!dragging) return; currentY = clientY; $sheet.style.transform = `translateY(${Math.max(0, currentY - startY)}px)`; }
   function dragEnd(clientY) {
     if (!dragging) return;
     dragging = false;
@@ -1153,22 +937,17 @@ function closeAll(skipAnim) {
     }
   }
 
-  /* Touch */
-  topBar.addEventListener('touchstart', e => dragStart(e.touches[0].clientY), { passive: true });
-  topBar.addEventListener('touchmove',  e => dragMove(e.touches[0].clientY),  { passive: true });
+  topBar.addEventListener('touchstart', e => dragStart(e.touches[0].clientY),        { passive: true });
+  topBar.addEventListener('touchmove',  e => dragMove(e.touches[0].clientY),          { passive: true });
   topBar.addEventListener('touchend',   e => dragEnd(e.changedTouches[0].clientY));
-
-  /* Mouse (desktop testing) */
-  topBar.addEventListener('mousedown', e => dragStart(e.clientY));
-  window.addEventListener('mousemove', e => { if (dragging) dragMove(e.clientY); });
-  window.addEventListener('mouseup',   e => { if (dragging) dragEnd(e.clientY); });
-
-  /* Stop drag from firing when the close button is tapped/clicked */
+  topBar.addEventListener('mousedown',  e => dragStart(e.clientY));
+  window.addEventListener('mousemove',  e => { if (dragging) dragMove(e.clientY); });
+  window.addEventListener('mouseup',    e => { if (dragging) dragEnd(e.clientY); });
   closeBtn.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
   closeBtn.addEventListener('mousedown',  e => e.stopPropagation());
 })();
 
-document.addEventListener('keydown', e => { if (e.key==='Escape') closeAll(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
 </script>
 </body>
 </html>
