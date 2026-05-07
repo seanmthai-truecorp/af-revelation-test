@@ -18,8 +18,16 @@
   <meta name="twitter:image" content="assets/brand/social_share_image.png" />
   <link rel="canonical" href="" />
   <link rel="icon" type="image/png" href="assets/brand/favicon.png" />
+
+  <!-- FIX #8: preconnect to both Google Fonts hosts to avoid extra DNS+TLS handshake -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Inter:wght@600;800&display=swap" rel="stylesheet" />
+
+  <!-- FIX #9: preload above-the-fold critical assets so browser fetches them early -->
+  <link rel="preload" as="image" href="assets/brand/af_logo.png" />
+  <link rel="preload" as="image" href="assets/brand/af_countdown_bg.png" media="(min-width: 601px)" />
+  <link rel="preload" as="image" href="assets/brand/af_countdown_bg_mobile.png" media="(max-width: 600px)" />
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -45,7 +53,8 @@
       background-size: cover;
       background-position: center top;
       background-repeat: no-repeat;
-      background-attachment: fixed;
+      /* FIX #3: removed background-attachment:fixed — it forces a full repaint on every scroll
+         because the browser cannot promote it to its own compositor layer */
     }
 
     body::before {
@@ -70,6 +79,7 @@
     }
     .orb {
       position: absolute; border-radius: 50%; opacity: 0;
+      will-change: transform, opacity;
       animation: floatUp var(--dur) var(--delay) ease-in-out infinite;
     }
     @keyframes floatUp {
@@ -83,6 +93,7 @@
       background: linear-gradient(180deg, rgba(255,200,80,0.55) 0%, rgba(255,200,80,0.10) 60%, transparent 100%);
       border-radius: 2px; filter: blur(4px);
       transform-origin: top center;
+      will-change: transform, opacity;
       animation: sweep var(--sdur) var(--sdelay) ease-in-out infinite alternate;
     }
     @keyframes sweep {
@@ -90,15 +101,21 @@
       50%  { opacity: 0.75; }
       100% { transform: rotate(var(--sb)); opacity: 0.25; }
     }
+
+    /* FIX #2: use transform:scale() instead of animating width/height, which triggers
+       layout reflow on every frame — scale runs on the compositor thread */
     .ring {
       position: absolute; left: 50%; top: 38%;
-      transform: translate(-50%, -50%); border-radius: 50%;
+      width: 40px; height: 40px;
+      transform: translate(-50%, -50%) scale(1);
+      border-radius: 50%;
       border: 1px solid rgba(255,200,80,0.14);
+      will-change: transform, opacity;
       animation: expandRing var(--rdur) var(--rdelay) ease-out infinite;
     }
     @keyframes expandRing {
-      0%   { width: 40px; height: 40px; opacity: 0.65; }
-      100% { width: 800px; height: 800px; opacity: 0; }
+      0%   { transform: translate(-50%, -50%) scale(1);  opacity: 0.65; }
+      100% { transform: translate(-50%, -50%) scale(20); opacity: 0; }
     }
 
     #dustCanvas {
@@ -173,7 +190,7 @@
       body {
         background-image: url('assets/brand/af_countdown_bg_mobile.png');
         background-position: center center;
-        background-attachment: scroll;
+        /* background-attachment already removed from desktop rule above */
       }
     }
 
@@ -219,7 +236,7 @@
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* Full-fill image — starts below a top reveal of the card gradient */
+    /* FIX #14: explicit width/height prevent layout shift (CLS) while images load */
     .contestant-card > img {
       position: absolute;
       top: 5%; left: 0; right: 0; bottom: 0;
@@ -228,7 +245,6 @@
       display: block;
     }
 
-    /* Bottom gradient veil — pure black fade, no red */
     .card-veil {
       position: absolute; inset: 0;
       background: linear-gradient(180deg,
@@ -239,7 +255,6 @@
       pointer-events: none;
     }
 
-    /* Floating info bar */
     .card-info {
       position: absolute;
       bottom: 0; left: 0; right: 0;
@@ -251,7 +266,6 @@
       gap: 9px;
     }
 
-    /* Circular code badge */
     .card-code {
       width: 46px; height: 46px;
       border-radius: 50%;
@@ -265,7 +279,6 @@
       flex-shrink: 0;
     }
 
-    /* Contestant name */
     .card-name {
       color: var(--accent);
       font-size: 36px;
@@ -326,8 +339,9 @@
       background-size: auto, auto, auto, auto, cover;
       background-position: 0 0, 0 0, 0 0, 0 0, top center;
       background-repeat: no-repeat;
-      backdrop-filter: blur(22px);
-      -webkit-backdrop-filter: blur(22px);
+      /* FIX #4: removed backdrop-filter:blur(22px) from modal-box —
+         .modal-backdrop already blurs the entire backdrop; double-blurring is very
+         expensive on mobile GPUs and produces no visible improvement */
       border: none;
       border-radius: 26px;
       box-shadow:
@@ -358,7 +372,6 @@
     }
     .modal-close:hover { background: rgba(235,28,36,0.42); transform: scale(1.1); }
 
-    /* LEFT: text — bottom-left aligned */
     .modal-text-col {
       flex: 0 0 45%;
       padding: 52px 32px 40px 44px;
@@ -418,7 +431,6 @@
       color: rgba(255,255,255,1);
     }
 
-    /* RIGHT: static image */
     .modal-stack-col {
       flex: 0 0 55%;
       position: relative;
@@ -436,12 +448,22 @@
     /* ════════════════════════════════════════
        BOTTOM SHEET (mobile ≤600px)
     ════════════════════════════════════════ */
+
+    /* FIX #1a: replace display:none/block toggle with opacity+pointer-events so the
+       backdrop can fade out smoothly alongside the sheet's close animation instead
+       of disappearing instantly (which made the background "pop" behind the sheet) */
     .sheet-backdrop {
-      display: none; position: fixed; inset: 0; z-index: 100;
+      position: fixed; inset: 0; z-index: 100;
       background: rgba(0,0,0,0.70);
       touch-action: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.24s ease;
     }
-    .sheet-backdrop.open { display: block; animation: backdropIn 0.22s ease; }
+    .sheet-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
     .bottom-sheet {
       position: fixed; top: 10dvh; bottom: 0; left: 0; right: 0; z-index: 101;
@@ -472,7 +494,6 @@
     @keyframes sheetUp   { from { transform:translateY(100%); } to { transform:translateY(0); } }
     @keyframes sheetDown { from { transform:translateY(0);    } to { transform:translateY(100%); } }
 
-    /* Top bar: handle + close X */
     .sheet-top-bar {
       position: relative;
       z-index: 10;
@@ -504,7 +525,6 @@
     }
     .sheet-close-x:hover { background: rgba(235,28,36,0.40); }
 
-    /* Stack wrap — transparent, gradient lives on bottom-sheet */
     .sheet-stack-wrap {
       position: relative;
       height: 45dvh;
@@ -523,7 +543,6 @@
       border-radius: 12px;
     }
 
-    /* Sheet body — dark gray */
     .sheet-body {
       flex: 1 1 0;
       min-height: 0;
@@ -535,7 +554,6 @@
       background: #1c1c1e;
     }
 
-    /* Badge + name row */
     .sheet-header-row {
       display: flex; align-items: flex-end; gap: 10px;
       margin-bottom: 12px;
@@ -554,7 +572,6 @@
       color: #FFAF29; line-height: 1.1; margin: 0;
     }
 
-    /* Sheet structured profile */
     .sheet-desc {
       display: flex; flex-direction: column; gap: 12px;
     }
@@ -630,15 +647,17 @@
 <div class="page">
 
   <div class="logo-wrap">
-    <img src="assets/brand/af_logo.png" alt="True Academy Fantasia" />
+    <img src="assets/brand/af_logo.png" alt="True Academy Fantasia" width="320" height="160" />
   </div>
 
   <h1 class="title">เปิดตัว 12 นักล่าฝัน<br class="title-br">แห่ง AF2026</h1>
 
   <div class="grid-wrap">
     <div class="contestant-grid" id="contestantGrid">
+    <!-- FIX #7: first 4 cards load eagerly (above fold on all viewports);
+         cards 5–12 use loading="lazy" to defer their network requests -->
     <div class="contestant-card" data-code="V1" data-name="พิม" onclick="openProfile(this)">
-      <img src="assets/contestants/V1%20home.png" alt="พิม" />
+      <img src="assets/contestants/V1%20home.png" alt="พิม" width="300" height="400" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V1</span>
@@ -646,7 +665,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V2" data-name="ณัฐ" onclick="openProfile(this)">
-      <img src="assets/contestants/V2%20home.png" alt="ณัฐ" />
+      <img src="assets/contestants/V2%20home.png" alt="ณัฐ" width="300" height="400" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V2</span>
@@ -654,7 +673,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V3" data-name="มณี" onclick="openProfile(this)">
-      <img src="assets/contestants/V3%20home.png" alt="มณี" />
+      <img src="assets/contestants/V3%20home.png" alt="มณี" width="300" height="400" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V3</span>
@@ -662,7 +681,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V4" data-name="ธน" onclick="openProfile(this)">
-      <img src="assets/contestants/V4%20home.png" alt="ธน" />
+      <img src="assets/contestants/V4%20home.png" alt="ธน" width="300" height="400" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V4</span>
@@ -670,7 +689,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V5" data-name="อ้อย" onclick="openProfile(this)">
-      <img src="assets/contestants/V5%20home.png" alt="อ้อย" />
+      <img src="assets/contestants/V5%20home.png" alt="อ้อย" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V5</span>
@@ -678,7 +697,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V6" data-name="วิชัย" onclick="openProfile(this)">
-      <img src="assets/contestants/V6%20home.png" alt="วิชัย" />
+      <img src="assets/contestants/V6%20home.png" alt="วิชัย" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V6</span>
@@ -686,7 +705,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V7" data-name="ภา" onclick="openProfile(this)">
-      <img src="assets/contestants/V7%20home.png" alt="ภา" />
+      <img src="assets/contestants/V7%20home.png" alt="ภา" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V7</span>
@@ -694,7 +713,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V8" data-name="กิต" onclick="openProfile(this)">
-      <img src="assets/contestants/V8%20home.png" alt="กิต" />
+      <img src="assets/contestants/V8%20home.png" alt="กิต" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V8</span>
@@ -702,7 +721,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V9" data-name="นุช" onclick="openProfile(this)">
-      <img src="assets/contestants/V9%20home.png" alt="นุช" />
+      <img src="assets/contestants/V9%20home.png" alt="นุช" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V9</span>
@@ -710,7 +729,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V10" data-name="ศักดิ์" onclick="openProfile(this)">
-      <img src="assets/contestants/V10%20home.png" alt="ศักดิ์" />
+      <img src="assets/contestants/V10%20home.png" alt="ศักดิ์" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V10</span>
@@ -718,7 +737,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V11" data-name="นภ" onclick="openProfile(this)">
-      <img src="assets/contestants/V11%20home.png" alt="นภ" />
+      <img src="assets/contestants/V11%20home.png" alt="นภ" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V11</span>
@@ -726,7 +745,7 @@
       </div>
     </div>
     <div class="contestant-card" data-code="V12" data-name="โก้" onclick="openProfile(this)">
-      <img src="assets/contestants/V12%20home.png" alt="โก้" />
+      <img src="assets/contestants/V12%20home.png" alt="โก้" width="300" height="400" loading="lazy" />
       <div class="card-veil"></div>
       <div class="card-info">
         <span class="card-code">V12</span>
@@ -739,7 +758,7 @@
   <div class="sponsor-section">
     <span class="sponsor-label">สนับสนุนโดย</span>
     <div class="sponsor-logo-wrap">
-      <img src="assets/brand/sponsors6_logo.png" alt="Sponsors" />
+      <img src="assets/brand/sponsors6_logo.png" alt="Sponsors" loading="lazy" />
     </div>
   </div>
 
@@ -836,7 +855,10 @@
 
 </div>
 
-<script src="contestants.js"></script>
+<!-- FIX #10: defer so this doesn't block HTML parsing; CONTESTANTS is only
+     accessed inside openProfile() which runs on user interaction, so it's
+     guaranteed to be loaded by then. Guard added in openProfile for safety. -->
+<script src="contestants.js" defer></script>
 <script>
 /* ════ ANIMATED BG ═══════════════════════ */
 (function(){
@@ -870,18 +892,32 @@
 (function () {
   const canvas = document.getElementById('dustCanvas');
   const ctx    = canvas.getContext('2d');
-  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+  /* FIX #13: debounce resize so it doesn't fire on every pixel during drag-resize */
+  function debounce(fn, wait) {
+    let t; return function() { clearTimeout(t); t = setTimeout(fn, wait); };
+  }
+
+  /* FIX #5: cache viewport width — reading window.innerWidth every rAF frame
+     can trigger style recalculation; update it only on debounced resize */
+  let _vpW = window.innerWidth;
+  function resize() { _vpW = window.innerWidth; canvas.width = _vpW; canvas.height = window.innerHeight; }
   resize();
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', debounce(resize, 16));
+
   const COLS = [[255,215,50],[255,185,20],[255,145,10],[255,235,120],[255,200,55],[255,165,40]];
+
+  /* FIX #6a: pre-build "R,G,B" strings once so the hot draw path avoids repeated
+     string interpolation of the same values every frame */
+  const COL_STRS = COLS.map(c => `${c[0]},${c[1]},${c[2]}`);
+
   class Dust {
     constructor(spawnX, spawnY) {
       const W = canvas.width, H = canvas.height;
       this.x = Math.max(0, Math.min(W, spawnX + (Math.random()-0.5)*W*0.55));
       this.y = Math.max(0, Math.min(H, spawnY + (Math.random()-0.5)*H*0.55));
       this.r = 0.5 + Math.pow(Math.random(), 2.5) * 2.8;
-      const c = COLS[Math.floor(Math.random()*COLS.length)];
-      this.cr=c[0]; this.cg=c[1]; this.cb=c[2];
+      this.cs      = COL_STRS[Math.floor(Math.random()*COL_STRS.length)];
       this.peak    = Math.random() < 0.12 ? 1.0 : 0.18 + Math.random()*0.45;
       this.vx      = (Math.random()-0.5)*0.25;
       this.vy      = -(0.06 + Math.random()*0.28);
@@ -906,9 +942,11 @@
       if (alpha<0.008) return;
       const hR=this.r*(this.r>1.8?8:5.5);
       const g=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,hR);
-      g.addColorStop(0,   `rgba(${this.cr},${this.cg},${this.cb},${alpha.toFixed(3)})`);
-      g.addColorStop(0.25,`rgba(${this.cr},${this.cg},${this.cb},${(alpha*0.4).toFixed(3)})`);
-      g.addColorStop(1,   `rgba(${this.cr},${this.cg},${this.cb},0)`);
+      /* FIX #6b: reuse pre-built color string; only compute alpha values (which do change) */
+      const a0=alpha.toFixed(3), a1=(alpha*0.4).toFixed(3);
+      g.addColorStop(0,   `rgba(${this.cs},${a0})`);
+      g.addColorStop(0.25,`rgba(${this.cs},${a1})`);
+      g.addColorStop(1,   `rgba(${this.cs},0)`);
       ctx.beginPath(); ctx.arc(this.x,this.y,hR,0,Math.PI*2);
       ctx.fillStyle=g; ctx.fill();
       if (this.peak>0.55 && this.r>1.2) {
@@ -918,6 +956,7 @@
     }
     isDead() { return this.life>=this.maxLife; }
   }
+
   const particles=[];
   let mode='idle', frameCounter=0, pauseFrames=30, activeDur=0;
   let sweepX=0, sweepY=0, sweepDX=0, sweepDY=0;
@@ -936,6 +975,7 @@
   }
   function startPause() { mode='idle'; frameCounter=0; pauseFrames=180+Math.floor(Math.random()*180); }
   startPause(); pauseFrames=30;
+
   function frame() {
     requestAnimationFrame(frame);
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -943,17 +983,28 @@
     if (mode==='idle') { if (frameCounter>=pauseFrames) startWave(); }
     else {
       sweepX+=sweepDX; sweepY+=sweepDY;
-      const n = window.innerWidth <= 600 ? 1+Math.floor(Math.random()*2) : 4+Math.floor(Math.random()*5);
+      /* FIX #5: use cached _vpW instead of reading window.innerWidth every frame */
+      const n = _vpW <= 600 ? 1+Math.floor(Math.random()*2) : 4+Math.floor(Math.random()*5);
       for (let i=0;i<n;i++) particles.push(new Dust(sweepX,sweepY));
       if (frameCounter>=activeDur) startPause();
     }
-    for (let i=particles.length-1;i>=0;i--) {
-      const p=particles[i]; p.update(); p.draw(ctx);
-      if (p.isDead()) particles.splice(i,1);
+    /* FIX #11: swap-and-pop instead of splice — avoids O(n) array element shifting
+       on every dead particle removal; swap with last element then pop is O(1) */
+    let i = 0;
+    while (i < particles.length) {
+      const p = particles[i];
+      p.update(); p.draw(ctx);
+      if (p.isDead()) {
+        particles[i] = particles[particles.length - 1];
+        particles.pop();
+      } else {
+        i++;
+      }
     }
   }
   requestAnimationFrame(frame);
 })();
+
 document.querySelectorAll('.contestant-card').forEach((c,i)=>c.style.setProperty('--i',i));
 document.querySelectorAll('.contestant-card').forEach(c => {
   c.addEventListener('mouseenter', () => { c.style.willChange = 'transform'; });
@@ -962,6 +1013,27 @@ document.querySelectorAll('.contestant-card').forEach(c => {
 
 /* ════ MODAL / SHEET LOGIC ═══════════════ */
 const isMobile = () => window.innerWidth <= 600;
+
+/* FIX #12: cache all DOM refs once at startup instead of querying on every interaction */
+const $sheet         = document.getElementById('bottomSheet');
+const $sheetBackdrop = document.getElementById('sheetBackdrop');
+const $modalBackdrop = document.getElementById('modalBackdrop');
+const $sheetBadge    = document.getElementById('sheetBadge');
+const $sheetName     = document.getElementById('sheetName');
+const $sheetAge      = document.getElementById('sheetAge');
+const $sheetHeight   = document.getElementById('sheetHeight');
+const $sheetHome     = document.getElementById('sheetHome');
+const $sheetGenre    = document.getElementById('sheetGenre');
+const $sheetQuote    = document.getElementById('sheetQuote');
+const $sheetImg      = document.getElementById('sheetStackImg');
+const $modalBadge    = document.getElementById('modalBadge');
+const $modalName     = document.getElementById('modalName');
+const $modalAge      = document.getElementById('modalAge');
+const $modalHeight   = document.getElementById('modalHeight');
+const $modalHome     = document.getElementById('modalHome');
+const $modalGenre    = document.getElementById('modalGenre');
+const $modalQuote    = document.getElementById('modalQuote');
+const $modalImg      = document.getElementById('modalStackImg');
 
 let _savedScrollY = 0;
 function lockBodyScroll() {
@@ -979,70 +1051,79 @@ function unlockBodyScroll() {
 
 function openProfile(card) {
   const code   = card.dataset.code;
-  const p      = CONTESTANTS[code] || {};
+  /* FIX #10 guard: CONTESTANTS may not yet be available on very slow connections
+     because contestants.js is deferred; fall back to empty object gracefully */
+  const p      = (typeof CONTESTANTS !== 'undefined' && CONTESTANTS[code]) || {};
   const name   = p.name || card.dataset.name;
   const imgSrc = 'assets/contestants/' + code + '.png';
 
   if (isMobile()) {
-    document.getElementById('sheetBadge').textContent  = code;
-    document.getElementById('sheetName').textContent   = name;
-    document.getElementById('sheetAge').textContent    = p.age    || '—';
-    document.getElementById('sheetHeight').textContent = p.height || '—';
-    document.getElementById('sheetHome').textContent   = p.home   || '—';
-    document.getElementById('sheetGenre').textContent  = p.genre  || '—';
-    document.getElementById('sheetQuote').textContent  = p.quote ? `"${p.quote}"` : '—';
-    const img = document.getElementById('sheetStackImg');
-    img.src = imgSrc; img.alt = name;
-    document.getElementById('sheetBackdrop').classList.add('open');
-    document.getElementById('bottomSheet').classList.add('open');
+    $sheetBadge.textContent  = code;
+    $sheetName.textContent   = name;
+    $sheetAge.textContent    = p.age    || '—';
+    $sheetHeight.textContent = p.height || '—';
+    $sheetHome.textContent   = p.home   || '—';
+    $sheetGenre.textContent  = p.genre  || '—';
+    $sheetQuote.textContent  = p.quote ? `"${p.quote}"` : '—';
+    $sheetImg.src = imgSrc; $sheetImg.alt = name;
+    $sheetBackdrop.classList.add('open');
+    $sheet.classList.add('open');
     lockBodyScroll();
   } else {
-    document.getElementById('modalBadge').textContent  = code;
-    document.getElementById('modalName').textContent   = name;
-    document.getElementById('modalAge').textContent    = p.age    || '—';
-    document.getElementById('modalHeight').textContent = p.height || '—';
-    document.getElementById('modalHome').textContent   = p.home   || '—';
-    document.getElementById('modalGenre').textContent  = p.genre  || '—';
-    document.getElementById('modalQuote').textContent  = p.quote ? `"${p.quote}"` : '—';
-    const img = document.getElementById('modalStackImg');
-    img.src = imgSrc; img.alt = name;
-    document.getElementById('modalBackdrop').classList.add('open');
+    $modalBadge.textContent  = code;
+    $modalName.textContent   = name;
+    $modalAge.textContent    = p.age    || '—';
+    $modalHeight.textContent = p.height || '—';
+    $modalHome.textContent   = p.home   || '—';
+    $modalGenre.textContent  = p.genre  || '—';
+    $modalQuote.textContent  = p.quote ? `"${p.quote}"` : '—';
+    $modalImg.src = imgSrc; $modalImg.alt = name;
+    $modalBackdrop.classList.add('open');
     lockBodyScroll();
   }
 }
 
 function handleBackdropClick(e) {
-  if (e.target === document.getElementById('modalBackdrop')) closeAll();
+  if (e.target === $modalBackdrop) closeAll();
 }
 
+/* FIX #1b: Reworked closeAll to eliminate the mobile flash.
+   Root causes fixed:
+   1. Inline style reset was unconditional at the top — caused a 1-frame snap
+      back to the open position before the closing animation could start.
+   2. Backdrop was removed immediately — the dark overlay disappeared while
+      the sheet was still visible, making the background "pop" behind it.
+   Fix: only reset inline styles in the skipAnim branch (after drag is done);
+   let the CSS opacity transition on .sheet-backdrop fade it out alongside
+   the sheetDown animation; clean up inline styles only after animationend. */
 function closeAll(skipAnim) {
-  const sheet    = document.getElementById('bottomSheet');
-  const backdrop = document.getElementById('sheetBackdrop');
-  sheet.style.transform  = '';
-  sheet.style.transition = '';
-  document.getElementById('modalBackdrop').classList.remove('open');
+  $modalBackdrop.classList.remove('open');
 
-  if (skipAnim || !sheet.classList.contains('open')) {
-    backdrop.classList.remove('open');
-    sheet.classList.remove('open', 'closing');
+  if (skipAnim || !$sheet.classList.contains('open')) {
+    $sheet.style.transform  = '';
+    $sheet.style.transition = '';
+    $sheetBackdrop.classList.remove('open');
+    $sheet.classList.remove('open', 'closing');
     unlockBodyScroll();
     return;
   }
 
-  backdrop.classList.remove('open');
-  sheet.classList.add('closing');
-  sheet.addEventListener('animationend', function handler() {
-    sheet.removeEventListener('animationend', handler);
-    sheet.classList.remove('open', 'closing');
+  /* Removing .open triggers the CSS opacity transition on the backdrop (0.24s),
+     which matches the sheet's sheetDown animation (0.24s) — they fade together */
+  $sheetBackdrop.classList.remove('open');
+  $sheet.classList.add('closing');
+  $sheet.addEventListener('animationend', function handler() {
+    $sheet.classList.remove('open', 'closing');
+    $sheet.style.transform  = '';
+    $sheet.style.transition = '';
     unlockBodyScroll();
   }, { once: true });
 }
 
 /* ── DRAG-TO-CLOSE (bottom sheet) ───────── */
 (function () {
-  const sheet   = document.getElementById('bottomSheet');
-  const topBar  = sheet.querySelector('.sheet-top-bar');
-  const closeBtn = sheet.querySelector('.sheet-close-x');
+  const topBar   = $sheet.querySelector('.sheet-top-bar');
+  const closeBtn = $sheet.querySelector('.sheet-close-x');
   const DISMISS_THRESHOLD = 80;
   let startY = 0, currentY = 0, dragging = false;
 
@@ -1050,25 +1131,25 @@ function closeAll(skipAnim) {
     startY = clientY;
     currentY = clientY;
     dragging = true;
-    sheet.style.transition = 'none';
+    $sheet.style.transition = 'none';
   }
   function dragMove(clientY) {
     if (!dragging) return;
     currentY = clientY;
     const dy = Math.max(0, currentY - startY);
-    sheet.style.transform = `translateY(${dy}px)`;
+    $sheet.style.transform = `translateY(${dy}px)`;
   }
   function dragEnd(clientY) {
     if (!dragging) return;
     dragging = false;
     const dy = Math.max(0, clientY - startY);
     if (dy > DISMISS_THRESHOLD) {
-      sheet.style.transition = 'transform 0.25s ease';
-      sheet.style.transform  = 'translateY(100%)';
+      $sheet.style.transition = 'transform 0.25s ease';
+      $sheet.style.transform  = 'translateY(100%)';
       setTimeout(() => closeAll(true), 250);
     } else {
-      sheet.style.transition = 'transform 0.25s cubic-bezier(.17,.67,.38,1.1)';
-      sheet.style.transform  = '';
+      $sheet.style.transition = 'transform 0.25s cubic-bezier(.17,.67,.38,1.1)';
+      $sheet.style.transform  = '';
     }
   }
 
