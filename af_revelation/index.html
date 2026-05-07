@@ -75,6 +75,7 @@
       color: var(--white);
       overflow-x: hidden;
     }
+    html.scroll-locked { overflow: hidden; }
 
     body {
       min-height: 100vh;
@@ -884,15 +885,10 @@ const $modalImg      = document.getElementById('modalStackImg');
 let _savedScrollY = 0;
 function lockBodyScroll() {
   _savedScrollY = window.scrollY;
-  document.body.style.position = 'fixed';
-  document.body.style.top = '-' + _savedScrollY + 'px';
-  document.body.style.width = '100%';
+  document.documentElement.classList.add('scroll-locked');
 }
 function unlockBodyScroll() {
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.width = '';
-  window.scrollTo(0, _savedScrollY);
+  document.documentElement.classList.remove('scroll-locked');
   window.scrollTo(0, _savedScrollY);
 }
 
